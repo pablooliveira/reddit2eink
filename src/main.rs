@@ -4,18 +4,16 @@ use roux::subreddit::responses::comments::SubredditReplies;
 use roux::subreddit::responses::submissions::SubmissionsData;
 use roux::util::error::RouxError;
 use roux::Subreddit;
-use shell_words;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process::Command;
-use tokio;
 
 #[derive(Clap)]
 #[clap(version = "0.0.1", author = "Pablo Oliveira <pablo@sifflez.org>")]
-/// Read latest posts and comments on your favorite subreddit on an eink device.
+/// Read your favorite subreddit's latest posts and comments on an e-ink device.
 ///
 /// Download latests posts from a subreddit with the full comment tree
 /// to a markdown document.
@@ -46,7 +44,7 @@ struct Opts {
 fn quote(str: &str) -> String {
     let mut s = String::from(">");
     s.push_str(str);
-    return s.replace("\n", "\n>");
+    s.replace("\n", "\n>")
 }
 
 fn parse_comment(comment: &SubredditCommentsData, depth: u32) -> String {
@@ -67,12 +65,12 @@ fn parse_comment(comment: &SubredditCommentsData, depth: u32) -> String {
             Some(SubredditReplies::Str(_)) | None => (),
         };
     }
-    return quote(&output);
+    quote(&output)
 }
 
-async fn parse_post<'a>(
+async fn parse_post(
     subreddit: &Subreddit,
-    post: &'a SubmissionsData,
+    post: &SubmissionsData,
 ) -> Result<String, RouxError> {
     let mut output = String::from("#");
     output.push_str(&post.title);
@@ -83,11 +81,11 @@ async fn parse_post<'a>(
     for comment in &comments.data.children {
         output.push_str(&parse_comment(&comment.data, 0));
     }
-    return Ok(output);
+    Ok(output)
 }
 
 fn clean_markdown(str: &str) -> String {
-    return str.replace("&amp;#x200B;", "\n");
+    str.replace("&amp;#x200B;", "\n")
 }
 
 fn write_markdown_file(path: &Path, output: &str) -> io::Result<()> {
@@ -117,14 +115,14 @@ fn run_ebook_converter(md_path: &Path, opts: &Opts) -> io::Result<()> {
 #[tokio::main]
 async fn main() -> Result<(), RouxError> {
     let opts: Opts = Opts::parse();
-    let mut output = String::from(format!(
+    let mut output = format!(
         "---
 title: /r/{}
 ---
 
 ",
         opts.subreddit
-    ));
+    );
 
     let subreddit = Subreddit::new(&opts.subreddit);
     let latest = subreddit.latest(opts.posts, None).await?;
